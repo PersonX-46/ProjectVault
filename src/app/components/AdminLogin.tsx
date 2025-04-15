@@ -174,6 +174,7 @@ export default function AdminLogin() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isLoading}
+                  onClick={() => router.push('/dashboard')} 
                   className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold rounded-lg shadow-lg hover:shadow-red-900/50 transition-all disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
