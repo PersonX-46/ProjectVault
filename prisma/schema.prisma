@@ -14,8 +14,40 @@ datasource db {
 }
 
 model admin {
-  id           String  @id  // Manually assigned ID
+  admin_id           String @id // Manually assigned ID
   name         String
   passwordHash String
 }
 
+model student {
+  student_id           String @id  // Manually assigned ID
+  name         String
+  passwordHash String
+  email        String
+  phone        String
+  address      String
+  prog_id      String
+  prog_name  String
+}
+
+model project {
+  id           String @id @default(uuid())// Manually assigned ID
+  title        String
+  description  String
+  student_id    String
+  category    String
+  admin_id String
+  report_url   String?
+  grade       String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model requests {
+  id           String @id // Manually assigned ID
+  student_id    String
+  project_id    String
+  status       String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
