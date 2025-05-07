@@ -674,7 +674,7 @@ export default function AdminDashboard() {
             </button>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-500"></div>
-              <span className="font-medium">elcome, {session?.user?.name}</span>
+              <span className="font-medium">Welcome, {session?.user?.name}</span>
             </div>
           </div>
         </div>

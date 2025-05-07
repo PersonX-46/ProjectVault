@@ -23,7 +23,7 @@ const NavBar = () => {
             </div>
             <h1 className="ml-3 text-white font-extrabold text-lg">
               <Link href="/" className="bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
-                Project Vault
+                Project Management
               </Link>
             </h1>
           </div>
