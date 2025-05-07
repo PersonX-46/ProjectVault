@@ -42,7 +42,7 @@ const NavBar = () => {
           <div className="hidden md:flex space-x-6 pl-3 items-center">
             {[
               { name: "Home", href: "/", icon: <Home size={18} /> },
-              { name: "Browse", href: "/student-dashboard", icon: <Search size={18} /> },
+              { name: "Browse", href: "/student-login", icon: <Search size={18} /> },
               { name: "Admin", href: "/login", icon: <UserCog size={18} /> },
             ].map(({ name, href, icon }) => (
               <Link
@@ -75,7 +75,7 @@ const NavBar = () => {
             <div className="flex flex-col items-center space-y-4">
               {[
                 { name: "Home", href: "/", icon: <Home size={18} /> },
-                { name: "Browse Projects", href: "/student-dashboard", icon: <Search size={18} /> },
+                { name: "Browse Projects", href: "/student-login", icon: <Search size={18} /> },
                 { name: "Admin Portal", href: "/dashboard", icon: <UserCog size={18} /> },
                 {
                   name: "Sign In",
