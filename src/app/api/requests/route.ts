@@ -1,46 +1,52 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../prisma/clients';
-import { Request, RequestStatus } from '@/app/types';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../../../lib/auth';
 
 export async function GET() {
-  try {
-    const requests = await prisma.requests.findMany();
-    return NextResponse.json(requests);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch requests' },
-      { status: 500 }
-    );
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-}
 
-export async function POST(request: Request) {
   try {
-    const body: Omit<Request, 'created_at' | 'updated_at'> = await request.json();
-    const { id, student_id, project_id, status } = body;
-
-    // Validate status
-    const validStatuses: RequestStatus[] = ['pending', 'approved', 'rejected'];
-    if (!validStatuses.includes(status as RequestStatus)) {
-      return NextResponse.json(
-        { error: 'Invalid request status' },
-        { status: 400 }
-      );
-    }
-
-    const requestItem = await prisma.requests.create({
-      data: {
-        id,
-        student_id,
-        project_id,
-        status,
+    const requests = await prisma.borrowRequest.findMany({
+      include: {
+        student: {
+          select: {
+            name: true,
+            student_id: true
+          }
+        },
+        project: {
+          select: {
+            title: true,
+            id: true
+          }
+        }
       },
+      orderBy: {
+        request_date: 'desc'
+      }
     });
 
-    return NextResponse.json(requestItem);
+    // Format the response to match your frontend expectations
+    const formattedRequests = requests.map(request => ({
+      id: request.id,
+      student_id: request.student_id,
+      student_name: request.student.name,
+      project_id: request.project_id,
+      project_title: request.project.title,
+      status: request.status,
+      created_at: request.request_date,
+      response_date: request.response_date
+    }));
+
+    return NextResponse.json(formattedRequests);
   } catch (error) {
+    console.error('Error fetching requests:', error);
     return NextResponse.json(
-      { error: 'Failed to create request' },
+      { error: 'Failed to fetch requests' },
       { status: 500 }
     );
   }

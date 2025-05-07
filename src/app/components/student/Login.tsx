@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { FaUserShield, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
 
-export default function AdminLogin() {
-  const [adminId, setAdminId] = useState("");
+export default function StudentLogin() {
+  const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -19,8 +19,8 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      const result = await signIn("admin-login", {
-        admin_id: adminId,
+      const result = await signIn("student-login", {
+        student_id: studentId,
         password,
         redirect: false
       });
@@ -29,15 +29,13 @@ export default function AdminLogin() {
         throw new Error(result.error);
       }
 
-      // Redirect on success
-      router.push("/dashboard");
+      router.push("/student-dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? "Username or Password Does Not Match!" : "Login failed");
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-black">
@@ -62,7 +60,7 @@ export default function AdminLogin() {
             className="text-5xl font-bold mb-6"
           >
             <span className="bg-gradient-to-r from-red-400 to-pink-600 bg-clip-text text-transparent">
-              Admin Portal
+              Student Portal
             </span>
           </motion.h1>
 
@@ -72,7 +70,7 @@ export default function AdminLogin() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-xl text-gray-300 mb-8"
           >
-            Restricted access to authorized personnel only. All activities are logged and monitored.
+            Secure access to your academic resources and institutional services.
           </motion.p>
 
           <motion.div
@@ -81,8 +79,8 @@ export default function AdminLogin() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex items-center gap-3 text-red-400"
           >
-            <FaUserShield className="text-xl" />
-            <span className="font-medium">Institutional credentials required</span>
+            <FaUser className="text-xl" />
+            <span className="font-medium">Student credentials required</span>
           </motion.div>
         </div>
 
@@ -100,7 +98,7 @@ export default function AdminLogin() {
             <div className="relative bg-gray-900/80 backdrop-blur-sm rounded-xl p-8 border border-gray-800">
               <h2 className="text-2xl font-bold text-white mb-6">
                 <span className="bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
-                  Administrator Login
+                  Student Login
                 </span>
               </h2>
 
@@ -116,20 +114,20 @@ export default function AdminLogin() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                    Institutional Email
+                  <label htmlFor="student_id" className="block text-sm font-medium text-gray-300 mb-2">
+                    Student ID
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                      <FaUserShield />
+                      <FaUser />
                     </div>
                     <input
-                      id="admin_id"
+                      id="student_id"
                       type="text"
-                      value={adminId}
-                      onChange={(e) => setAdminId(e.target.value)}
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white placeholder-gray-500"
-                      placeholder="Enter your admin ID"
+                      placeholder="Enter your student ID"
                       required
                     />
                   </div>
@@ -151,7 +149,7 @@ export default function AdminLogin() {
                       className="w-full pl-10 pr-12 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white placeholder-gray-500"
                       placeholder="••••••••"
                       required
-                      minLength={8}
+                      minLength={4}
                     />
                     <button
                       type="button"
@@ -176,10 +174,10 @@ export default function AdminLogin() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Authenticating...
+                      Signing in...
                     </>
                   ) : (
-                    "Access Dashboard"
+                    "Access Portal"
                   )}
                 </motion.button>
               </form>

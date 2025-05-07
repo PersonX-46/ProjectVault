@@ -28,13 +28,15 @@ export type Admin = {
     updated_at: Date;
   };
   
-  export type Request = {
+  interface Request {
     id: string;
     student_id: string;
+    student_name?: string;
     project_id: string;
-    status: string;
-    created_at: Date;
-    updated_at: Date;
-  };
+    project_title?: string;
+    status: 'pending' | 'approved' | 'rejected';
+    created_at: string | Date;
+    response_date?: string | Date | null;
+  }
   
   export type RequestStatus = 'pending' | 'approved' | 'rejected';

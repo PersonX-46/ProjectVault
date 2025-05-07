@@ -19,6 +19,7 @@ import {
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { motion } from "framer-motion";
 import { report } from "process";
+import { useSession } from "next-auth/react";
 
 type Admin = {
   admin_id: string;
@@ -69,6 +70,7 @@ export default function AdminDashboard() {
   // State hooks must be at the top level of the component
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const { data: session } = useSession();
 
   // Project states
   const [projects, setProjects] = useState<Project[]>([]);
@@ -77,8 +79,9 @@ export default function AdminDashboard() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   // Add these to your existing state declarations
-const [file, setFile] = useState<File | null>(null);
-const [isUploading, setIsUploading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null); // Add this
 
   const categories = ["Web Application", "Mobile App", "Machine Learning", "Data Science", "IoT", "Cybersecurity"];
 
@@ -148,22 +151,22 @@ const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    
+
     if (!selectedFile) return;
-  
+
     // Validate file type
     const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(selectedFile.type)) {
       alert('Only PDF and DOCX files are allowed');
       return;
     }
-  
+
     // Validate file size (10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
       alert('File size exceeds 10MB limit');
       return;
     }
-  
+
     setFile(selectedFile);
   };
 
@@ -185,60 +188,72 @@ const [isUploading, setIsUploading] = useState(false);
   const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-  
+    setSubmissionError(null);
+
     try {
-      // 1. First handle file upload if a file was selected
+      // Validate required fields
+      const requiredFields = {
+        'Project Title': formData.title.trim(),
+        'Description': formData.description.trim(),
+        'Student ID': formData.student_id.trim()
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value)
+        .map(([name]) => name);
+
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Handle file upload
       let reportUrl = formData.report_url || null;
       if (file) {
-        setIsUploading(true);
-        
-        // Create FormData for file upload
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-        uploadFormData.append('projectTitle', formData.title);
-        uploadFormData.append('studentId', formData.student_id);
-  
-        // Upload the file
-        const uploadResponse = await fetch('/api/project/upload', {
-          method: 'POST',
-          body: uploadFormData,
-        });
-  
-        if (!uploadResponse.ok) {
-          throw new Error('File upload failed');
-          console.log(uploadResponse.status)
+        try {
+          setIsUploading(true);
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', file);
+          uploadFormData.append('projectTitle', formData.title);
+          uploadFormData.append('studentId', formData.student_id);
+
+          const uploadResponse = await fetch('/api/project/upload', {
+            method: 'POST',
+            body: uploadFormData,
+          });
+
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
+          }
+
+          const uploadResult = await uploadResponse.json();
+          reportUrl = uploadResult.url;
+        } catch (uploadError) {
+          console.error('File upload error:', uploadError);
+          throw new Error(`File upload failed: ${uploadError.message}`);
+        } finally {
+          setIsUploading(false);
         }
-  
-        const uploadResult = await uploadResponse.json();
-        reportUrl = uploadResult.url;
-        setIsUploading(false);
       }
-  
-      // 2. Prepare all project data for submission
+
+      // Prepare submission data
       const submissionData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         student_id: formData.student_id.trim(),
         category: formData.category,
         grade: formData.grade,
-        admin_id: "admin1", // Get from auth context in real app
+        admin_id: "admin1",
         report_url: reportUrl,
-        // These will be set by the server if creating new
         ...(currentProject ? { id: currentProject.id } : {}),
       };
-  
-      // 3. Validate required fields
-      if (!submissionData.title || !submissionData.description || !submissionData.student_id) {
-        throw new Error('Please fill all required fields');
-      }
-  
-      // 4. Determine API endpoint and method
-      const url = currentProject 
+
+      // Submit project data
+      const url = currentProject
         ? `/api/project/${currentProject.id}`
         : '/api/project';
       const method = currentProject ? 'PUT' : 'POST';
-  
-      // 5. Submit the project data
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -246,22 +261,27 @@ const [isUploading, setIsUploading] = useState(false);
         },
         body: JSON.stringify(submissionData),
       });
-  
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Submission failed');
+        const errorData = await response.json().catch(() => ({}));
+        const statusText = response.statusText || 'Unknown error';
+        throw new Error(
+          errorData.message ||
+          errorData.error ||
+          `Server responded with ${response.status}: ${statusText}`
+        );
       }
-  
+
       const result = await response.json();
-  
-      // 6. Update state based on response
+
+      // Update state
       if (currentProject) {
         setProjects(projects.map(p => p.id === currentProject.id ? result : p));
       } else {
         setProjects(prevProjects => [...prevProjects, result]);
       }
-  
-      // 7. Reset form and close modal
+
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -272,11 +292,10 @@ const [isUploading, setIsUploading] = useState(false);
       });
       setFile(null);
       setIsModalOpen(false);
-  
+
     } catch (error) {
-      console.error('Error submitting project:', error);
-      // Here you could set an error state to display to the user
-      // setSubmissionError(error instanceof Error ? error.message : 'An unknown error occurred');
+      console.error('Project submission error:', error);
+      setSubmissionError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
       setIsLoading(false);
       setIsUploading(false);
@@ -398,7 +417,7 @@ const [isUploading, setIsUploading] = useState(false);
   // Handle form input changes
   const handleStudentInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-  
+
     setStudentFormData(prev => ({
       ...prev,
       // Handle both 'password' and 'passwordHash' names
@@ -445,13 +464,13 @@ const [isUploading, setIsUploading] = useState(false);
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsStudentLoading(true);
-  
+
     try {
       const url = currentStudent
         ? `/api/students/${currentStudent.student_id}`
         : '/api/students';
       const method = currentStudent ? 'PUT' : 'POST';
-  
+
       // Prepare the data to send
       const requestData: Partial<Student> & { password?: string } = {
         student_id: studentFormData.student_id,
@@ -463,7 +482,7 @@ const [isUploading, setIsUploading] = useState(false);
         prog_name: studentFormData.prog_name,
         passwordHash: studentFormData.passwordHash,
       };
-  
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -471,13 +490,13 @@ const [isUploading, setIsUploading] = useState(false);
         },
         body: JSON.stringify(requestData),
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to save student');
       }
-  
+
       const savedStudent: Student = await response.json();
-  
+
       // Update state based on whether we're adding or editing
       if (currentStudent) {
         setStudents(students.map(s =>
@@ -486,7 +505,7 @@ const [isUploading, setIsUploading] = useState(false);
       } else {
         setStudents(prev => [...prev, savedStudent]);
       }
-  
+
       setIsStudentModalOpen(false);
     } catch (error) {
       console.error('Error saving student:', error);
@@ -587,19 +606,20 @@ const [isUploading, setIsUploading] = useState(false);
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update request');
-      }
+      const data = await response.json();
 
-      const updatedRequest: Request = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update request');
+      }
 
       setRequests(prevRequests =>
         prevRequests.map(request =>
-          request.id === requestId ? updatedRequest : request
+          request.id === requestId ? data : request
         )
       );
     } catch (error) {
       console.error('Error updating request:', error);
+      alert(error.message || 'Failed to update request');
     } finally {
       setIsRequestLoading(false);
     }
@@ -654,7 +674,7 @@ const [isUploading, setIsUploading] = useState(false);
             </button>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-500"></div>
-              <span className="font-medium">Admin</span>
+              <span className="font-medium">elcome, {session?.user?.name}</span>
             </div>
           </div>
         </div>
@@ -1374,7 +1394,7 @@ const [isUploading, setIsUploading] = useState(false);
               {/* Requests Management Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">
-                  Project Requests
+                  Borrow Requests
                 </h2>
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -1417,14 +1437,15 @@ const [isUploading, setIsUploading] = useState(false);
               {/* Requests Table */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden">
                 {isRequestLoading ? (
-                  <div className="p-8 text-center text-gray-400">
+                  <div className="p-8 text-center text-gray-400 flex items-center justify-center gap-2">
+                    <FaSpinner className="animate-spin" />
                     Loading requests...
                   </div>
                 ) : filteredRequests.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">
                     {requestSearchQuery || requestStatusFilter !== "all"
-                      ? "No requests match your criteria"
-                      : "No requests found"}
+                      ? "No matching requests found"
+                      : "No borrow requests yet"}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1434,7 +1455,7 @@ const [isUploading, setIsUploading] = useState(false);
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Request ID</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Student</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Project</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Request Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                           <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -1442,24 +1463,30 @@ const [isUploading, setIsUploading] = useState(false);
                       <tbody className="divide-y divide-gray-700">
                         {filteredRequests.map((request) => (
                           <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
-                              {request.id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {request.student_name || request.student_id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {request.project_title || request.project_id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {new Date(request.created_at).toLocaleDateString()}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">
+                              {request.id.slice(0, 8)}...
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
+                              <div className="text-sm font-medium text-white">{request.student_name}</div>
+                              <div className="text-xs text-gray-400">{request.student_id}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-white">{request.project_title}</div>
+                              <div className="text-xs text-gray-400">{request.project_id.slice(0, 8)}...</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {new Date(request.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
                                 request.status === "rejected" ? "bg-red-900/50 text-red-300" :
                                   "bg-yellow-900/50 text-yellow-300"
                                 }`}>
-                                {request.status}
+                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1468,13 +1495,13 @@ const [isUploading, setIsUploading] = useState(false);
                                   <>
                                     <button
                                       onClick={() => updateRequestStatus(request.id, "approved")}
-                                      className="text-green-400 hover:text-green-300 p-1 rounded-full hover:bg-green-900/20 transition-colors"
+                                      className="px-3 py-1 bg-green-900/30 text-green-300 rounded-md hover:bg-green-800/50 transition-colors text-sm"
                                     >
                                       Approve
                                     </button>
                                     <button
                                       onClick={() => updateRequestStatus(request.id, "rejected")}
-                                      className="text-red-400 hover:text-red-300 p-1 rounded-full hover:bg-red-900/20 transition-colors"
+                                      className="px-3 py-1 bg-red-900/30 text-red-300 rounded-md hover:bg-red-800/50 transition-colors text-sm"
                                     >
                                       Reject
                                     </button>
@@ -1482,9 +1509,10 @@ const [isUploading, setIsUploading] = useState(false);
                                 )}
                                 <button
                                   onClick={() => deleteRequest(request.id)}
-                                  className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700/50 transition-colors"
+                                  className="p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-gray-700/50 transition-colors"
+                                  title="Delete request"
                                 >
-                                  <FaTrash />
+                                  <FaTrash size={14} />
                                 </button>
                               </div>
                             </td>
