@@ -736,7 +736,7 @@ export default function AdminDashboard() {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-500"></div>
               <span className="font-medium">Welcome, {session?.user?.name}</span>
             </div>
-            <LogoutButton redirectUrl="/login"/>
+            <LogoutButton redirectUrl="/login" />
           </div>
         </div>
       </header>
@@ -802,235 +802,235 @@ export default function AdminDashboard() {
         <main className="flex-1">
           {/* Overview Tab */}
           {activeTab === "overview" && (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration: 0.5 }}
-    className="space-y-8"
-  >
-    {/* Stats Cards - Now using real data */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {[
-        { 
-          title: "Total Projects", 
-          value: projects.length, 
-          icon: <FaBook className="text-2xl" />, 
-          color: "from-red-600 to-pink-600" 
-        },
-        { 
-          title: "Pending Requests", 
-          value: requests.filter(r => r.status === "pending").length, 
-          icon: <FaFileDownload className="text-2xl" />, 
-          color: "from-orange-600 to-red-600" 
-        },
-        { 
-          title: "Registered Students", 
-          value: students.length, 
-          icon: <FaUsers className="text-2xl" />, 
-          color: "from-purple-600 to-pink-600" 
-        }
-      ].map((card, index) => (
-        <motion.div 
-          key={index}
-          whileHover={{ y: -5 }}
-          className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6 shadow-lg"
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-sm text-gray-400">{card.title}</p>
-              <p className="text-3xl font-bold mt-2 bg-gradient-to-r bg-clip-text text-transparent from-white to-gray-300">
-                {card.value}
-              </p>
-            </div>
-            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-md`}>
-              {card.icon}
-            </div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-
-    {/* Charts Section */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Projects by Program Chart */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-        <h3 className="text-lg font-semibold mb-4">Projects by Program</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={programs.map(program => ({
-                  name: program.name,
-                  value: projects.filter(p => p.student?.prog_id === program.id).length
-                }))}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {programs.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1F2937',
-                  borderColor: '#4B5563',
-                  borderRadius: '0.5rem'
-                }}
-              />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Projects by Grade Chart */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-        <h3 className="text-lg font-semibold mb-4">Projects by Grade</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={[
-                { name: 'A+', value: projects.filter(p => p.grade === 'A+').length },
-                { name: 'A', value: projects.filter(p => p.grade === 'A').length },
-                { name: 'A-', value: projects.filter(p => p.grade === 'A-').length },
-                { name: 'B+', value: projects.filter(p => p.grade === 'B+').length },
-                { name: 'B', value: projects.filter(p => p.grade === 'B').length },
-                { name: 'B-', value: projects.filter(p => p.grade === 'B-').length },
-                { name: 'C+', value: projects.filter(p => p.grade === 'C+').length },
-              ]}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-8"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-              <XAxis dataKey="name" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{ 
-                  backgroundColor: '#1F2937',
-                  borderColor: '#4B5563',
-                  borderRadius: '0.5rem'
-                }}
-              />
-              <Bar 
-                dataKey="value" 
-                radius={[4, 4, 0, 0]}
-                fill="#8884d8"
-                animationDuration={1500}
-              >
-                {['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+'].map((grade, index) => (
-                  <Cell key={`cell-${index}`} fill={getGradeColorClass(grade).replace('bg-', '').replace('/50', '')} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-
-    {/* Recent Activity */}
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Recent Borrow Requests</h3>
-        <div className="flex space-x-2">
-          <select
-            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            value={requestStatusFilter}
-            onChange={(e) => setRequestStatusFilter(e.target.value as any)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Search requests..."
-            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            value={requestSearchQuery}
-            onChange={(e) => setRequestSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead>
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Student</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Project</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700">
-            {filteredRequests.slice(0, 5).map((request) => {
-              const student = students.find(s => s.student_id === request.student_id);
-              const project = projects.find(p => p.id === request.project_id);
-              
-              return (
-                <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-white">{student?.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-400">{request.student_id}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {project?.title || 'Unknown Project'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {new Date(request.request_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
-                      request.status === "rejected" ? "bg-red-900/50 text-red-300" :
-                        "bg-yellow-900/50 text-yellow-300"
-                      }`}>
-                      {request.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      {request.status === "pending" && (
-                        <>
-                          <button 
-                            onClick={() => updateRequestStatus(request.id, "approved")}
-                            className="text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-900/20 transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button 
-                            onClick={() => updateRequestStatus(request.id, "rejected")}
-                            className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      <button 
-                        onClick={() => deleteRequest(request.id)}
-                        className="text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
-                      >
-                        <FaTrash />
-                      </button>
+              {/* Stats Cards - Now using real data */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  {
+                    title: "Total Projects",
+                    value: projects.length,
+                    icon: <FaBook className="text-2xl" />,
+                    color: "from-red-600 to-pink-600"
+                  },
+                  {
+                    title: "Pending Requests",
+                    value: requests.filter(r => r.status === "pending").length,
+                    icon: <FaFileDownload className="text-2xl" />,
+                    color: "from-orange-600 to-red-600"
+                  },
+                  {
+                    title: "Registered Students",
+                    value: students.length,
+                    icon: <FaUsers className="text-2xl" />,
+                    color: "from-purple-600 to-pink-600"
+                  }
+                ].map((card, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ y: -5 }}
+                    className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6 shadow-lg"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm text-gray-400">{card.title}</p>
+                        <p className="text-3xl font-bold mt-2 bg-gradient-to-r bg-clip-text text-transparent from-white to-gray-300">
+                          {card.value}
+                        </p>
+                      </div>
+                      <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-md`}>
+                        {card.icon}
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {filteredRequests.length === 0 && (
-        <div className="text-center py-4 text-gray-400">
-          No requests found
-        </div>
-      )}
-    </div>
-  </motion.div>
-)}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Projects by Program Chart */}
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold mb-4">Projects by Program</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={programs.map(program => ({
+                            name: program.name,
+                            value: projects.filter(p => p.student?.prog_id === program.id).length
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {programs.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#1F2937',
+                            borderColor: '#4B5563',
+                            borderRadius: '0.5rem'
+                          }}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Projects by Grade Chart */}
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold mb-4">Projects by Grade</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: 'A+', value: projects.filter(p => p.grade === 'A+').length },
+                          { name: 'A', value: projects.filter(p => p.grade === 'A').length },
+                          { name: 'A-', value: projects.filter(p => p.grade === 'A-').length },
+                          { name: 'B+', value: projects.filter(p => p.grade === 'B+').length },
+                          { name: 'B', value: projects.filter(p => p.grade === 'B').length },
+                          { name: 'B-', value: projects.filter(p => p.grade === 'B-').length },
+                          { name: 'C+', value: projects.filter(p => p.grade === 'C+').length },
+                        ]}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+                        <XAxis dataKey="name" stroke="#9CA3AF" />
+                        <YAxis stroke="#9CA3AF" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#1F2937',
+                            borderColor: '#4B5563',
+                            borderRadius: '0.5rem'
+                          }}
+                        />
+                        <Bar
+                          dataKey="value"
+                          radius={[4, 4, 0, 0]}
+                          fill="#8884d8"
+                          animationDuration={1500}
+                        >
+                          {['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+'].map((grade, index) => (
+                            <Cell key={`cell-${index}`} fill={getGradeColorClass(grade).replace('bg-', '').replace('/50', '')} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Recent Borrow Requests</h3>
+                  <div className="flex space-x-2">
+                    <select
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                      value={requestStatusFilter}
+                      onChange={(e) => setRequestStatusFilter(e.target.value as any)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Search requests..."
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                      value={requestSearchQuery}
+                      onChange={(e) => setRequestSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-700">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Student</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Project</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {filteredRequests.slice(0, 5).map((request) => {
+                        const student = students.find(s => s.student_id === request.student_id);
+                        const project = projects.find(p => p.id === request.project_id);
+
+                        return (
+                          <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="font-medium text-white">{student?.name || 'Unknown'}</div>
+                              <div className="text-sm text-gray-400">{request.student_id}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {project?.title || 'Unknown Project'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {new Date(request.request_date).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
+                                request.status === "rejected" ? "bg-red-900/50 text-red-300" :
+                                  "bg-yellow-900/50 text-yellow-300"
+                                }`}>
+                                {request.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                {request.status === "pending" && (
+                                  <>
+                                    <button
+                                      onClick={() => updateRequestStatus(request.id, "approved")}
+                                      className="text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-900/20 transition-colors"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => updateRequestStatus(request.id, "rejected")}
+                                      className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => deleteRequest(request.id)}
+                                  className="text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                                >
+                                  <FaTrash />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {filteredRequests.length === 0 && (
+                  <div className="text-center py-4 text-gray-400">
+                    No requests found
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
 
           {/* Projects Tab */}
           {activeTab === "projects" && (

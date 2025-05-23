@@ -57,9 +57,9 @@ export default function Footer() {
                 <span>System</span>
               </h3>
               <ul className="space-y-3">
-                <li><a href="/dashboard" className="text-gray-400 hover:text-red-400 transition-colors">Dashboard</a></li>
-                <li><a href="/projects" className="text-gray-400 hover:text-red-400 transition-colors">Projects</a></li>
-                <li><a href="/requests" className="text-gray-400 hover:text-red-400 transition-colors">Requests</a></li>
+                <li><a href="/student-dashboard" className="text-gray-400 hover:text-red-400 transition-colors">Dashboard</a></li>
+                <li><a href="/student-dashboard" className="text-gray-400 hover:text-red-400 transition-colors">Projects</a></li>
+                <li><a href="/student-dashboard" className="text-gray-400 hover:text-red-400 transition-colors">Requests</a></li>
                 <li><a href="/admin" className="text-gray-400 hover:text-red-400 transition-colors">Admin</a></li>
               </ul>
             </div>
@@ -69,9 +69,9 @@ export default function Footer() {
                 <span>Legal</span>
               </h3>
               <ul className="space-y-3">
-                <li><a href="/terms" className="text-gray-400 hover:text-red-400 transition-colors">Terms</a></li>
-                <li><a href="/privacy" className="text-gray-400 hover:text-red-400 transition-colors">Privacy</a></li>
-                <li><a href="/contact" className="text-gray-400 hover:text-red-400 transition-colors">Contact</a></li>
+                <li><a href="/terms-privacy#terms" className="text-gray-400 hover:text-red-400 transition-colors">Terms</a></li>
+                <li><a href="/terms-privacy#privacy" className="text-gray-400 hover:text-red-400 transition-colors">Privacy</a></li>
+                <li><a href="/terms-privacy#contact" className="text-gray-400 hover:text-red-400 transition-colors">Contact</a></li>
               </ul>
             </div>
           </motion.div>
