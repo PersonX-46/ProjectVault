@@ -86,3 +86,31 @@ export async function DELETE(
     );
   }
 }
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const student = await prisma.student.findFirst({
+      where: {
+        student_id: params.id
+      }
+    });
+
+    if (!student) {
+      return NextResponse.json(
+        { error: `Student with ID ${params.id} not found` },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(student);
+  } catch (error) {
+    console.error('Error fetching student:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch student' },
+      { status: 500 }
+    );
+  }
+}

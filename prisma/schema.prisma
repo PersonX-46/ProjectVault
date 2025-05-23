@@ -41,6 +41,7 @@ model project {
   description    String
   student_id     String
   student        student          @relation(fields: [student_id], references: [student_id])
+  prog_id        String           // Add this field to reference program
   category       String
   admin_id       String
   report_url     String?

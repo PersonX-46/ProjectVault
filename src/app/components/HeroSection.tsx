@@ -28,7 +28,7 @@ export default function HeroSection() {
             className="text-5xl font-bold mb-6"
           >
             <span className="bg-gradient-to-r from-red-400 to-pink-600 bg-clip-text text-transparent">
-              Project Management
+              MSU Project Management
             </span>
           </motion.h1>
 
@@ -48,13 +48,13 @@ export default function HeroSection() {
             className="flex gap-4"
           >
             <Link
-              href="/student/dashboard"
+              href="/student-dashboard"
               className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg font-bold text-white hover:shadow-xl hover:shadow-red-900/50 transition-all flex items-center gap-2"
             >
               <FaSearch /> Browse Projects
             </Link>
             <Link
-              href="/admin/dashboard"
+              href="/dashboard"
               className="px-6 py-3 border border-red-500 text-red-400 rounded-lg font-bold hover:bg-red-900/30 transition-all flex items-center gap-2"
             >
               <FaUserShield /> Admin Portal

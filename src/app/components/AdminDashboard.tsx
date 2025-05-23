@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { ResponsiveContainer } from "recharts";
 import {
   FaChartPie,
   FaBook,
@@ -43,6 +44,8 @@ type Project = {
   title: string;
   description: string;
   student_id: string;
+  prog_id: string;
+  student: Student;
   category: string;
   admin_id: string;
   report_url?: string | null;
@@ -60,10 +63,27 @@ type Request = {
   updated_at: Date;
 };
 
+interface StudentData {
+  prog_id: string;
+  prog_name: string;
+}
+
+interface ProjectSubmission {
+  title: string;
+  description: string;
+  student_id: string;
+  prog_id: string;
+  category: string;
+  grade: string;
+  admin_id: string;
+  report_url: string | null;
+  id?: string;
+}
+
 type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 
-const COLORS = ["#FF4560", "#00E396", "#008FFB", "#FEB019", "#775DD0"];
+const COLORS = ['#0088FE', '#ffC49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function AdminDashboard() {
 
@@ -83,7 +103,7 @@ export default function AdminDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null); // Add this
 
-  const categories = ["Web Application", "Mobile App", "Machine Learning", "Data Science", "IoT", "Cybersecurity"];
+  const categories = ["Web Application", "Mobile App", "Information System"];
 
   // Form state - matches your existing structure
   const [formData, setFormData] = useState({
@@ -121,7 +141,9 @@ export default function AdminDashboard() {
     const filtered = projects.filter(project =>
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.category.toLowerCase().includes(searchQuery.toLowerCase())
+      project.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.student?.prog_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.student?.prog_id?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredProjects(filtered);
   }, [searchQuery, projects]);
@@ -206,7 +228,7 @@ export default function AdminDashboard() {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
-      // Handle file upload
+      // Handle file upload first
       let reportUrl = formData.report_url || null;
       if (file) {
         try {
@@ -236,16 +258,22 @@ export default function AdminDashboard() {
         }
       }
 
+      const studentResponse = await fetch(`/api/students/${formData.student_id.trim()}`);
+      if (!studentResponse.ok) {
+        throw new Error(`Student with ID ${formData.student_id.trim()} not found.`);
+      }
+      const student = await studentResponse.json();
+
       // Prepare submission data
       const submissionData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         student_id: formData.student_id.trim(),
         category: formData.category,
+        prog_id: student.prog_id,
         grade: formData.grade,
         admin_id: "admin1",
-        report_url: reportUrl,
-        ...(currentProject ? { id: currentProject.id } : {}),
+        report_url: reportUrl
       };
 
       // Submit project data
@@ -254,29 +282,48 @@ export default function AdminDashboard() {
         : '/api/project';
       const method = currentProject ? 'PUT' : 'POST';
 
+      // const response = await fetch(url, {
+      //   method,
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(submissionData),
+      // });
+
+      // if (!response.ok) {
+      //   const errorData = await response.json().catch(() => ({}));
+      //   throw new Error(
+      //     errorData.message ||
+      //     errorData.error ||
+      //     `Server responded with ${response.status}`
+      //   );
+      // }
+
       const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const statusText = response.statusText || 'Unknown error';
-        throw new Error(
-          errorData.message ||
-          errorData.error ||
-          `Server responded with ${response.status}: ${statusText}`
-        );
+        let errorMessage = `Server responded with ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (err) {
+          const rawText = await response.text();
+          console.error("Non-JSON error response:", rawText);
+          errorMessage += ` - ${rawText}`;
+        }
+        throw new Error(errorMessage);
       }
+
 
       const result = await response.json();
 
       // Update state
       if (currentProject) {
-        setProjects(projects.map(p => p.id === currentProject.id ? result : p));
+        setProjects(projects.map(p =>
+          p.id === currentProject.id ? result : p
+        ));
       } else {
         setProjects(prevProjects => [...prevProjects, result]);
       }
@@ -332,9 +379,7 @@ export default function AdminDashboard() {
     { year: "2024", projects: 28 }
   ];
 
-  const grades = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D", "F"];
-
-
+  const grades = ["A", "A-", "B+"];
 
 
 
@@ -376,10 +421,8 @@ export default function AdminDashboard() {
 
   // Mock programs data - should eventually come from API
   const [programs] = useState<Program[]>([
-    { id: "CS101", name: "Computer Science" },
-    { id: "EE101", name: "Electrical Engineering" },
-    { id: "ME101", name: "Mechanical Engineering" },
-    { id: "CE101", name: "Civil Engineering" }
+    { id: "CS101", name: "Diploma Teknologi Maklumat" },
+    { id: "EE101", name: "Sijil Sains Komputer" },
   ]);
 
   // Fetch students from API
@@ -537,7 +580,22 @@ export default function AdminDashboard() {
   };
 
 
-
+  const getGradeColorClass = (grade: string) => {
+    switch (grade) {
+      case 'A+':
+        return 'bg-green-900/50 text-green-300';
+      case 'A':
+      case 'A-':
+      case 'B+':
+        return 'bg-blue-900/50 text-blue-300';
+      case 'B':
+      case 'B-':
+      case 'C+':
+        return 'bg-yellow-900/50 text-yellow-300';
+      default:
+        return 'bg-red-900/50 text-red-300';
+    }
+  };
 
 
 
@@ -704,8 +762,6 @@ export default function AdminDashboard() {
                 { icon: <FaBook />, name: "Projects", tab: "projects" },
                 { icon: <FaUsers />, name: "Students", tab: "students" },
                 { icon: <FaFileDownload />, name: "Borrow Requests", tab: "requests" },
-                { icon: <FaFileUpload />, name: "Upload Project", tab: "upload" },
-                { icon: <FaCalendarAlt />, name: "Calendar", tab: "calendar" }
               ].map((item) => (
                 <button
                   key={item.tab}
@@ -725,15 +781,15 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-400">Total Projects</p>
-                <p className="text-2xl font-bold text-white">143</p>
+                <p className="text-2xl font-bold text-white">{projects.length}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Pending Requests</p>
-                <p className="text-2xl font-bold text-red-400">7</p>
+                <p className="text-2xl font-bold text-red-400">{requests.filter(r => r.status === "pending").length}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Active Students</p>
-                <p className="text-2xl font-bold text-white">89</p>
+                <p className="text-2xl font-bold text-white">{students.length}</p>
               </div>
             </div>
           </div>
@@ -743,125 +799,235 @@ export default function AdminDashboard() {
         <main className="flex-1">
           {/* Overview Tab */}
           {activeTab === "overview" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="space-y-8"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Stats Cards */}
-                {[
-                  { title: "Projects Uploaded", value: "143", change: "+12%", icon: <FaBook className="text-2xl" />, color: "from-red-600 to-pink-600" },
-                  { title: "Active Requests", value: "7", change: "-3%", icon: <FaFileDownload className="text-2xl" />, color: "from-orange-600 to-red-600" },
-                  { title: "Registered Students", value: "89", change: "+5%", icon: <FaUsers className="text-2xl" />, color: "from-purple-600 to-pink-600" }
-                ].map((card, index) => (
-                  <div key={index} className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm text-gray-400">{card.title}</p>
-                        <p className="text-3xl font-bold mt-2">{card.value}</p>
-                        <p className={`text-sm mt-1 ${card.change.startsWith("+") ? "text-green-400" : "text-red-400"}`}>
-                          {card.change} from last month
-                        </p>
-                      </div>
-                      <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-white`}>
-                        {card.icon}
-                      </div>
-                    </div>
-                  </div>
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="space-y-8"
+  >
+    {/* Stats Cards - Now using real data */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[
+        { 
+          title: "Total Projects", 
+          value: projects.length, 
+          icon: <FaBook className="text-2xl" />, 
+          color: "from-red-600 to-pink-600" 
+        },
+        { 
+          title: "Pending Requests", 
+          value: requests.filter(r => r.status === "pending").length, 
+          icon: <FaFileDownload className="text-2xl" />, 
+          color: "from-orange-600 to-red-600" 
+        },
+        { 
+          title: "Registered Students", 
+          value: students.length, 
+          icon: <FaUsers className="text-2xl" />, 
+          color: "from-purple-600 to-pink-600" 
+        }
+      ].map((card, index) => (
+        <motion.div 
+          key={index}
+          whileHover={{ y: -5 }}
+          className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6 shadow-lg"
+        >
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-400">{card.title}</p>
+              <p className="text-3xl font-bold mt-2 bg-gradient-to-r bg-clip-text text-transparent from-white to-gray-300">
+                {card.value}
+              </p>
+            </div>
+            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-md`}>
+              {card.icon}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+
+    {/* Charts Section */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Projects by Program Chart */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+        <h3 className="text-lg font-semibold mb-4">Projects by Program</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={programs.map(program => ({
+                  name: program.name,
+                  value: projects.filter(p => p.student?.prog_id === program.id).length
+                }))}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {programs.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
-              </div>
+              </Pie>
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1F2937',
+                  borderColor: '#4B5563',
+                  borderRadius: '0.5rem'
+                }}
+              />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
-              {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold mb-4">Projects by Department</h3>
-                  <div className="h-64">
-                    <PieChart width={400} height={300}>
-                      <Pie
-                        data={projectData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+      {/* Projects by Grade Chart */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+        <h3 className="text-lg font-semibold mb-4">Projects by Grade</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={[
+                { name: 'A+', value: projects.filter(p => p.grade === 'A+').length },
+                { name: 'A', value: projects.filter(p => p.grade === 'A').length },
+                { name: 'A-', value: projects.filter(p => p.grade === 'A-').length },
+                { name: 'B+', value: projects.filter(p => p.grade === 'B+').length },
+                { name: 'B', value: projects.filter(p => p.grade === 'B').length },
+                { name: 'B-', value: projects.filter(p => p.grade === 'B-').length },
+                { name: 'C+', value: projects.filter(p => p.grade === 'C+').length },
+              ]}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+              <XAxis dataKey="name" stroke="#9CA3AF" />
+              <YAxis stroke="#9CA3AF" />
+              <Tooltip
+                contentStyle={{ 
+                  backgroundColor: '#1F2937',
+                  borderColor: '#4B5563',
+                  borderRadius: '0.5rem'
+                }}
+              />
+              <Bar 
+                dataKey="value" 
+                radius={[4, 4, 0, 0]}
+                fill="#8884d8"
+                animationDuration={1500}
+              >
+                {['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+'].map((grade, index) => (
+                  <Cell key={`cell-${index}`} fill={getGradeColorClass(grade).replace('bg-', '').replace('/50', '')} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+
+    {/* Recent Activity */}
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Recent Borrow Requests</h3>
+        <div className="flex space-x-2">
+          <select
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            value={requestStatusFilter}
+            onChange={(e) => setRequestStatusFilter(e.target.value as any)}
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Search requests..."
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+            value={requestSearchQuery}
+            onChange={(e) => setRequestSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead>
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Student</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Project</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {filteredRequests.slice(0, 5).map((request) => {
+              const student = students.find(s => s.student_id === request.student_id);
+              const project = projects.find(p => p.id === request.project_id);
+              
+              return (
+                <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-white">{student?.name || 'Unknown'}</div>
+                    <div className="text-sm text-gray-400">{request.student_id}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {project?.title || 'Unknown Project'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {new Date(request.request_date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
+                      request.status === "rejected" ? "bg-red-900/50 text-red-300" :
+                        "bg-yellow-900/50 text-yellow-300"
+                      }`}>
+                      {request.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      {request.status === "pending" && (
+                        <>
+                          <button 
+                            onClick={() => updateRequestStatus(request.id, "approved")}
+                            className="text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-900/20 transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            onClick={() => updateRequestStatus(request.id, "rejected")}
+                            className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      <button 
+                        onClick={() => deleteRequest(request.id)}
+                        className="text-gray-400 hover:text-gray-300 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
                       >
-                        {projectData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </div>
-                </div>
-
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold mb-4">Projects by Year</h3>
-                  <div className="h-64">
-                    <BarChart
-                      width={400}
-                      height={300}
-                      data={yearlyData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
-                      <XAxis dataKey="year" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#1F2937", borderColor: "#4B5563" }}
-                      />
-                      <Legend />
-                      <Bar dataKey="projects" fill="#FF4560" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 p-6">
-                <h3 className="text-lg font-semibold mb-4">Recent Borrow Requests</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-700">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Student</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Project</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700">
-                      {requests.map((request) => (
-                        <tr key={request.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{request.student}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{request.project}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{request.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.status === "approved" ? "bg-green-900/50 text-green-300" :
-                              request.status === "rejected" ? "bg-red-900/50 text-red-300" :
-                                "bg-yellow-900/50 text-yellow-300"
-                              }`}>
-                              {request.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                            <div className="flex space-x-2">
-                              <button className="text-green-400 hover:text-green-300">Approve</button>
-                              <button className="text-red-400 hover:text-red-300">Reject</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </motion.div>
-          )}
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {filteredRequests.length === 0 && (
+        <div className="text-center py-4 text-gray-400">
+          No requests found
+        </div>
+      )}
+    </div>
+  </motion.div>
+)}
 
           {/* Projects Tab */}
           {activeTab === "projects" && (
@@ -874,7 +1040,7 @@ export default function AdminDashboard() {
               {/* Project Management Header (unchanged) */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">
-                  Project Management
+                  MSU Project Management
                 </h2>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <div className="relative flex-1">
@@ -909,9 +1075,7 @@ export default function AdminDashboard() {
               {/* Projects Table */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden">
                 {isLoading ? (
-                  <div className="p-8 text-center text-gray-400">
-                    Loading projects...
-                  </div>
+                  <div className="p-8 text-center text-gray-400">Loading projects...</div>
                 ) : filteredProjects.length === 0 ? (
                   <div className="p-8 text-center text-gray-400">
                     {searchQuery ? "No projects match your search" : "No projects found"}
@@ -924,6 +1088,7 @@ export default function AdminDashboard() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Category</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Student ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Program</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grade</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Report</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Last Updated</th>
@@ -940,38 +1105,54 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{project.category}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{project.student_id}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${project.grade === "A+" ? "bg-green-900/50 text-green-300" :
-                                ["A", "A-", "B+"].includes(project.grade) ? "bg-blue-900/50 text-blue-300" :
-                                  ["B", "B-", "C+"].includes(project.grade) ? "bg-yellow-900/50 text-yellow-300" :
-                                    "bg-red-900/50 text-red-300"
-                                }`}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono bg-gray-700/50 px-2 py-1 rounded">
+                                  {project.student?.prog_id || 'N/A'}
+                                </span>
+                                <span className="text-sm text-gray-300">
+                                  {project.student?.prog_name || ''}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getGradeColorClass(project.grade)}`}>
                                 {project.grade}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              <a
-                                href={`${project.report_url}`} // Adjust this URL as needed
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1"
-                              >
-                                <FaFileAlt /> View Report
-                              </a>
+                              {project.report_url ? (
+                                <a
+                                  href={project.report_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1"
+                                >
+                                  <FaFileAlt /> View Report
+                                </a>
+                              ) : (
+                                <span className="text-gray-500">No report</span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                              {new Date(project.updated_at).toLocaleDateString()}
+                              {new Date(project.updated_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end space-x-2">
                                 <button
                                   onClick={() => openEditModal(project)}
                                   className="text-blue-400 hover:text-blue-300 p-1 rounded-full hover:bg-blue-900/20 transition-colors"
+                                  aria-label="Edit project"
                                 >
                                   <FaEdit />
                                 </button>
                                 <button
                                   onClick={() => deleteProject(project.id)}
                                   className="text-red-400 hover:text-red-300 p-1 rounded-full hover:bg-red-900/20 transition-colors"
+                                  aria-label="Delete project"
                                 >
                                   <FaTrash />
                                 </button>

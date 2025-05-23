@@ -36,37 +36,53 @@ export async function PUT(
 ) {
   try {
     const body: Partial<Project> = await request.json();
+    
+    // Get the current project to maintain program info
+    const currentProject = await prisma.project.findUnique({
+      where: { id: params.id },
+      select: { student_id: true }
+    });
+
+    if (!currentProject) {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get student info to maintain program data
+    const student = await prisma.student.findUnique({
+      where: { student_id: currentProject.student_id },
+      select: { prog_id: true, prog_name: true }
+    });
+
     const project = await prisma.project.update({
-      where: {
-        id: params.id,
+      where: { id: params.id },
+      data: {
+        ...body,
+        // Maintain program info if not provided
+        prog_id: body.prog_id || student?.prog_id
       },
-      data: body,
+      include: {
+        student: {
+          select: {
+            prog_id: true,
+            prog_name: true
+          }
+        }
+      }
     });
 
     return NextResponse.json(project);
   } catch (error) {
+    console.error('Update error:', error);
     return NextResponse.json(
-      { error: 'Failed to update project' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    await prisma.project.delete({
-      where: {
-        id: params.id,
+      { 
+        error: 'Failed to update project',
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: error.message 
+        })
       },
-    });
-
-    return NextResponse.json({ message: 'Project deleted successfully' });
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to delete project' },
       { status: 500 }
     );
   }
