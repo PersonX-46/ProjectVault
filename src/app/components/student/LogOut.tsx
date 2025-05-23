@@ -4,7 +4,11 @@
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-export default function LogoutButton() {
+interface LogoutButtonProps {
+  redirectUrl: string;
+}
+
+export default function LogoutButton({redirectUrl}: LogoutButtonProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -16,7 +20,7 @@ export default function LogoutButton() {
       await signOut({ redirect: false });
       
       // Redirect to login page
-      router.push('/student-login');
+      router.push(redirectUrl);
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);

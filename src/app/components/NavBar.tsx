@@ -59,7 +59,7 @@ const NavBar = () => {
           {/* Login Button */}
           <div className="hidden md:flex">
             <Link
-              href="/login"
+              href="/student-login"
               className="px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold rounded-full shadow-md hover:shadow-red-900/50 transition-all"
             >
               Sign In

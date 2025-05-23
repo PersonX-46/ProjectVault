@@ -24,3 +24,39 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+  
+  /* Hide everything except elements with print:block */
+  body * {
+    visibility: hidden;
+  }
+  
+  .print\:block, .print\:block * {
+    visibility: visible;
+  }
+  
+  .print\:block {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  /* Reset any backgrounds for printing */
+  .print\:block table, 
+  .print\:block th, 
+  .print\:block td {
+    background: white !important;
+    color: black !important;
+  }
+  
+  @page {
+    margin: 1cm;
+  }
+}

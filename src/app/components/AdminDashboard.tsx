@@ -21,6 +21,8 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { motion } from "framer-motion";
 import { report } from "process";
 import { useSession } from "next-auth/react";
+import { LogOut } from "lucide-react";
+import LogoutButton from "./student/LogOut";
 
 type Admin = {
   admin_id: string;
@@ -734,6 +736,7 @@ export default function AdminDashboard() {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-pink-500"></div>
               <span className="font-medium">Welcome, {session?.user?.name}</span>
             </div>
+            <LogoutButton redirectUrl="/login"/>
           </div>
         </div>
       </header>

@@ -5,6 +5,8 @@ import { ProjectCard } from "../components/student/ProjectCard";
 import { Filters } from "../components/student/Filters";
 import { redirect } from "next/navigation";
 import { FaClock, FaCheck, FaTimes, FaBook } from "react-icons/fa";
+import { FaPrint } from "react-icons/fa";
+import PrintButton from "../components/student/PrintButton";
 
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions);
@@ -77,7 +79,7 @@ export default async function StudentDashboard() {
           <div className="flex items-center space-x-4">
             <span className="text-sm">Welcome, {session.user.name}</span>
             <form action="/api/auth/signout" method="POST">
-              <button 
+              <button
                 type="submit"
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
               >
@@ -92,10 +94,101 @@ export default async function StudentDashboard() {
       <main className="container mx-auto p-6">
         {/* My Borrow Requests Section */}
         <section className="mb-12">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <FaBook className="text-red-400" /> My Borrow Requests
-          </h2>
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FaBook className="text-red-400" /> My Borrow Requests
+            </h2>
+            {myBorrowRequests.length > 0 && (
+              <PrintButton />
+            )}
+          </div>
+
+          {/* Printable version - hidden except when printing */}
+          {/* Printable version - hidden except when printing */}
+          <div className="hidden print:block">
+            <div className="max-w-4xl mx-auto p-6">
+              {/* Header with logo and student info */}
+              <div className="flex justify-between items-start mb-8 border-b-2 border-gray-200 pb-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-1">Borrow Requests</h1>
+                  <p className="text-gray-600">Generated from MSU Project Management System</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-gray-700 font-medium">{session.user.name}</p>
+                  <p className="text-gray-500 text-sm">{session.user.email || 'MSU Student'}</p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Printed on: {new Date().toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Requests table */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {myBorrowRequests.map((request) => (
+                      <tr key={request.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{request.project.title}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {request.project.student.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(request.request_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${request.status === 'approved'
+                              ? 'bg-green-100 text-green-800'
+                              : request.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-12 pt-6 border-t-2 border-gray-200 text-xs text-gray-500">
+                <div className="flex justify-between">
+                  <div>
+                    <p>MSU Project Management System</p>
+                    <p>© {new Date().getFullYear()} All rights reserved</p>
+                  </div>
+                  <div className="text-right">
+                    <p>This document is system-generated</p>
+                    <p>Page 1 of 1</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Regular version - hidden when printing */}
+          <div className="print:hidden bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden">
             {myBorrowRequests.length === 0 ? (
               <div className="p-6 text-center text-gray-400">
                 You haven't made any borrow requests yet.
@@ -154,7 +247,7 @@ export default async function StudentDashboard() {
 
         {/* Available Projects Section */}
         <section>
-          <h2 className="text-xl font-bold mb-4">Available Projects</h2>
+          <h2 className="text-xl font-bold mb-4 print:hidden">Available Projects</h2>
           <Filters
             categories={categories}
             onFilterChange={async (filters) => {
@@ -165,10 +258,10 @@ export default async function StudentDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             {allProjects.map((project) => (
-              <ProjectCard 
-                key={project.id} 
-                project={project} 
-                studentId={studentId} 
+              <ProjectCard
+                key={project.id}
+                project={project}
+                studentId={studentId}
                 hasRequested={project.BorrowRequest.length > 0}
               />
             ))}
