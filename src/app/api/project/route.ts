@@ -5,12 +5,20 @@ import { Project } from '@/app/types';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, description, student_id, category, admin_id, report_url, grade } = body;
+    const { title, description, student_id, category, admin_id, report_url, grade, storage_location } = body;
 
     // Validate required fields
     if (!title || !description || !student_id || !category || !admin_id || !grade) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate storage location format if provided
+    if (storage_location && !/^\d+C\d+R$/.test(storage_location)) {
+      return NextResponse.json(
+        { error: 'Storage location must be in format like "6C4R" (ColumnRow)' },
         { status: 400 }
       );
     }
@@ -50,15 +58,17 @@ export async function POST(request: Request) {
         title,
         description,
         student_id,
-        prog_id: student.prog_name, // Now valid per your schema
+        prog_id: student.prog_id,
         category,
         admin_id,
         report_url: report_url || null,
-        grade
+        grade,
+        storage_location: storage_location || null
       },
       include: {
         student: {
           select: {
+            name: true,
             prog_id: true,
             prog_name: true
           }
@@ -90,6 +100,7 @@ export async function GET() {
       include: {
         student: {
           select: {
+            name: true,
             prog_id: true,
             prog_name: true
           }

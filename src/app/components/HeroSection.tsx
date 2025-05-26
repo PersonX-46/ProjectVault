@@ -28,7 +28,7 @@ export default function HeroSection() {
             className="text-5xl font-bold mb-6"
           >
             <span className="bg-gradient-to-r from-red-400 to-pink-600 bg-clip-text text-transparent">
-              MSU Project Management
+              MSU College Project Management
             </span>
           </motion.h1>
 

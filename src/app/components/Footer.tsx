@@ -27,7 +27,7 @@ export default function Footer() {
                 <FaUniversity className="text-white text-lg" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
-                Project Management
+                MSU College Project Management
               </span>
             </div>
             <p className="text-gray-400 text-sm mb-4">
@@ -89,7 +89,7 @@ export default function Footer() {
             viewport={{ once: true }}
             className="text-gray-500 text-sm mb-4 md:mb-0"
           >
-            © {new Date().getFullYear()} ProjectVault. Academic use only.
+            © {new Date().getFullYear()} MSU College Project Management. Academic use only.
           </motion.p>
 
           <motion.div

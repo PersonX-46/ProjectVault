@@ -45,6 +45,7 @@ model project {
   category       String
   admin_id       String
   report_url     String?
+  storage_location String?
   grade          String
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt

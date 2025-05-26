@@ -22,6 +22,7 @@ export type Admin = {
     student_id: string;
     category: string;
     admin_id: string;
+    storage_location?: string | null;
     report_url?: string | null;
     grade: string;
     created_at: Date;

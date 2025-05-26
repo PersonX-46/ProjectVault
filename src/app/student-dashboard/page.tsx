@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { FaClock, FaCheck, FaTimes, FaBook } from "react-icons/fa";
 import { FaPrint } from "react-icons/fa";
 import PrintButton from "../components/student/PrintButton";
+import PrintSingleRequest from "../components/student/PrintSingleRequest";
 
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions);
@@ -49,12 +50,13 @@ export default async function StudentDashboard() {
   // Fetch only this student's borrow requests
   const myBorrowRequests = await prisma.borrowRequest.findMany({
     where: {
-      student_id: studentId // Only requests made by this student
+      student_id: studentId
     },
     include: {
       project: {
         select: {
           title: true,
+          storage_location: true,  // Include storage location
           student: {
             select: {
               name: true,
@@ -75,7 +77,7 @@ export default async function StudentDashboard() {
       {/* Header */}
       <header className="bg-gradient-to-r from-red-900 to-pink-900 p-6 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">MSU Project Management</h1>
+          <h1 className="text-2xl font-bold">MSU College Project Management</h1>
           <div className="flex items-center space-x-4">
             <span className="text-sm">Welcome, {session.user.name}</span>
             <form action="/api/auth/signout" method="POST">
@@ -128,6 +130,53 @@ export default async function StudentDashboard() {
                 </div>
               </div>
 
+              {/* Hidden print templates for individual requests */}
+{myBorrowRequests.map((request) => (
+  <div key={`print-${request.id}`} id={`print-content-${request.id}`} className="hidden">
+    <h1 className="text-2xl font-bold mb-4">Borrow Request Details</h1>
+    <table>
+      <tbody>
+        <tr>
+          <th>Project Title</th>
+          <td>{request.project.title}</td>
+        </tr>
+        <tr>
+          <th>Owner</th>
+          <td>{request.project.student.name}</td>
+        </tr>
+        <tr>
+          <th>Request Date</th>
+          <td>{new Date(request.request_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}</td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td className={`status-${request.status}`}>
+            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+          </td>
+        </tr>
+        <tr>
+          <th>Storage Location</th>
+          <td>{request.project.storage_location || 'Not assigned'}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div className="footer">
+      <p>Generated from MSU Project Management System</p>
+      <p>Printed on: {new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}</p>
+    </div>
+  </div>
+))}
+
               {/* Requests table */}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -137,6 +186,7 @@ export default async function StudentDashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Storage Location</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -165,6 +215,15 @@ export default async function StudentDashboard() {
                             {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {request.project.storage_location ? (
+                            <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                              {request.project.storage_location}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Not assigned</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -189,60 +248,66 @@ export default async function StudentDashboard() {
 
           {/* Regular version - hidden when printing */}
           <div className="print:hidden bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden">
-            {myBorrowRequests.length === 0 ? (
-              <div className="p-6 text-center text-gray-400">
-                You haven't made any borrow requests yet.
+  {myBorrowRequests.length === 0 ? (
+    <div className="p-6 text-center text-gray-400">
+      You haven't made any borrow requests yet.
+    </div>
+  ) : (
+    <table className="min-w-full divide-y divide-gray-700">
+      <thead className="bg-gray-700/50">
+        <tr>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Project</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Owner</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Request Date</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-700">
+        {myBorrowRequests.map((request) => (
+          <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
+            <td className="px-6 py-4 whitespace-nowrap">
+              <div className="font-medium text-white">{request.project.title}</div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+              {request.project.student.name}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+              {new Date(request.request_date).toLocaleDateString()}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+              <div className="flex items-center gap-2">
+                {request.status === "pending" && (
+                  <>
+                    <FaClock className="text-yellow-400" />
+                    <span className="text-yellow-400">Pending</span>
+                  </>
+                )}
+                {request.status === "approved" && (
+                  <>
+                    <FaCheck className="text-green-400" />
+                    <span className="text-green-400">Approved</span>
+                  </>
+                )}
+                {request.status === "rejected" && (
+                  <>
+                    <FaTimes className="text-red-400" />
+                    <span className="text-red-400">Rejected</span>
+                  </>
+                )}
               </div>
-            ) : (
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Project</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Owner</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Request Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {myBorrowRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-700/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-white">{request.project.title}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {request.project.student.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {new Date(request.request_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          {request.status === "pending" && (
-                            <>
-                              <FaClock className="text-yellow-400" />
-                              <span className="text-yellow-400">Pending</span>
-                            </>
-                          )}
-                          {request.status === "approved" && (
-                            <>
-                              <FaCheck className="text-green-400" />
-                              <span className="text-green-400">Approved</span>
-                            </>
-                          )}
-                          {request.status === "rejected" && (
-                            <>
-                              <FaTimes className="text-red-400" />
-                              <span className="text-red-400">Rejected</span>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <div className="flex justify-end space-x-2">
+                <PrintSingleRequest request={request} />
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
         </section>
 
         {/* Available Projects Section */}

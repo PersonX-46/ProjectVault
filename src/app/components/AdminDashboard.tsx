@@ -46,6 +46,7 @@ type Project = {
   title: string;
   description: string;
   student_id: string;
+  storage_location: string;
   prog_id: string;
   student: Student;
   category: string;
@@ -114,7 +115,8 @@ export default function AdminDashboard() {
     student_id: "",
     category: "",
     grade: "",
-    report_url: ""
+    report_url: "",
+    storage_location: "" // Add this field
   });
 
   // Fetch projects from API
@@ -165,6 +167,7 @@ export default function AdminDashboard() {
     setFormData({
       title: "",
       description: "",
+      storage_location: "",
       student_id: "",
       category: "",
       grade: "",
@@ -202,6 +205,7 @@ export default function AdminDashboard() {
       description: project.description,
       student_id: project.student_id,
       category: project.category,
+      storage_location: project.storage_location,
       grade: project.grade,
       report_url: project.report_url || ""
     });
@@ -228,6 +232,11 @@ export default function AdminDashboard() {
 
       if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Validate storage location format if provided
+      if (formData.storage_location && !/^\d+C\d+R$/.test(formData.storage_location)) {
+        throw new Error('Storage location must be in format like "6C4R" (ColumnRow)');
       }
 
       // Handle file upload first
@@ -266,7 +275,7 @@ export default function AdminDashboard() {
       }
       const student = await studentResponse.json();
 
-      // Prepare submission data
+      // Prepare submission data with storage_location
       const submissionData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -275,7 +284,8 @@ export default function AdminDashboard() {
         prog_id: student.prog_id,
         grade: formData.grade,
         admin_id: "admin1",
-        report_url: reportUrl
+        report_url: reportUrl,
+        storage_location: formData.storage_location || null // Add the storage location
       };
 
       // Submit project data
@@ -283,21 +293,6 @@ export default function AdminDashboard() {
         ? `/api/project/${currentProject.id}`
         : '/api/project';
       const method = currentProject ? 'PUT' : 'POST';
-
-      // const response = await fetch(url, {
-      //   method,
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(submissionData),
-      // });
-
-      // if (!response.ok) {
-      //   const errorData = await response.json().catch(() => ({}));
-      //   throw new Error(
-      //     errorData.message ||
-      //     errorData.error ||
-      //     `Server responded with ${response.status}`
-      //   );
-      // }
 
       const response = await fetch(url, {
         method: method,
@@ -318,7 +313,6 @@ export default function AdminDashboard() {
         throw new Error(errorMessage);
       }
 
-
       const result = await response.json();
 
       // Update state
@@ -337,7 +331,8 @@ export default function AdminDashboard() {
         student_id: "",
         category: "",
         grade: "",
-        report_url: ""
+        report_url: "",
+        storage_location: "" // Reset storage location too
       });
       setFile(null);
       setIsModalOpen(false);
@@ -1043,7 +1038,7 @@ export default function AdminDashboard() {
               {/* Project Management Header (unchanged) */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">
-                  MSU Project Management
+                  MSU College Project Management
                 </h2>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <div className="relative flex-1">
@@ -1092,6 +1087,7 @@ export default function AdminDashboard() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Category</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Student ID</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Program</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Location</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grade</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Report</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Last Updated</th>
@@ -1117,6 +1113,15 @@ export default function AdminDashboard() {
                                 </span>
                               </div>
                             </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {project.storage_location ? (
+                                <span className="font-mono bg-gray-700/50 px-2 py-1 rounded">
+                                  {project.storage_location}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">Not assigned</span>
+                              )}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getGradeColorClass(project.grade)}`}>
                                 {project.grade}
@@ -1136,6 +1141,7 @@ export default function AdminDashboard() {
                                 <span className="text-gray-500">No report</span>
                               )}
                             </td>
+                            
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                               {new Date(project.updated_at).toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -1244,6 +1250,22 @@ export default function AdminDashboard() {
                                   <option key={category} value={category}>{category}</option>
                                 ))}
                               </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-1">
+                                Storage Location (e.g., 6C4R)
+                              </label>
+                              <input
+                                type="text"
+                                name="storage_location"
+                                value={formData.storage_location || ''}
+                                onChange={handleInputChange}
+                                placeholder="ColumnRow (e.g., 6C4R)"
+                                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white"
+                                pattern="[0-9]+C[0-9]+R"  // Validation pattern for format like 6C4R
+                                title="Please use format like 6C4R (ColumnRow)"
+                              />
                             </div>
 
                             <div>
